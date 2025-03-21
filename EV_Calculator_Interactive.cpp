@@ -1,11 +1,11 @@
 #include "sierrachart.h"
 
-SCDLLName("EV Calculator - Interactive")
+SCDLLName("EV Calculator - Menu Lite")
 
-// ID de menu contextuel
-const int MENU_ID_INPUTS = 100001;
+// ID du menu contextuel personnalisé
+const int MENU_ID_HINT = 100001;
 
-SCSFExport scsf_EVCalculator_Interactive(SCStudyInterfaceRef sc)
+SCSFExport scsf_EVCalculator_Interactive_Lite(SCStudyInterfaceRef sc)
 {
   SCInputRef inputTarget = sc.Input[0];
   SCInputRef inputRisque = sc.Input[1];
@@ -13,8 +13,8 @@ SCSFExport scsf_EVCalculator_Interactive(SCStudyInterfaceRef sc)
 
   if (sc.SetDefaults)
   {
-    sc.GraphName = "EV Calculator (Interactive)";
-    sc.StudyDescription = "EV dynamique avec input utilisateur via menu contextuel et InputBox()";
+    sc.GraphName = "EV Calculator (Menu Lite)";
+    sc.StudyDescription = "EV avec menu contextuel. Modifier les inputs dans le panneau d'étude.";
     sc.AutoLoop = 0;
 
     inputTarget.Name = "Target (en R)";
@@ -26,42 +26,15 @@ SCSFExport scsf_EVCalculator_Interactive(SCStudyInterfaceRef sc)
     inputProba.Name = "Probabilité de gain (en %)";
     inputProba.SetFloat(50.0);
 
-    // Active le menu contextuel personnalisé
-    sc.MenuEventID = MENU_ID_INPUTS;
+    sc.MenuEventID = MENU_ID_HINT;
 
     return;
   }
 
-  // 🎯 Menu personnalisé cliqué ?
-  if (sc.MenuEventID == MENU_ID_INPUTS)
+  // 🧠 Menu contextuel activé
+  if (sc.MenuEventID == MENU_ID_HINT)
   {
-    SCString val;
-    float f;
-
-    // 🟢 1. Target
-    if (sc.InputBox("Entrez la Target (en R)", "Target", val))
-    {
-      f = (float)atof(val.GetChars());
-      inputTarget.SetFloat(f);
-    }
-
-    // 🔴 2. Risque
-    if (sc.InputBox("Entrez le Risque (en R)\nEx: -1 ou +0.75", "Risque", val))
-    {
-      f = (float)atof(val.GetChars());
-      inputRisque.SetFloat(f);
-    }
-
-    // 🔵 3. Proba
-    if (sc.InputBox("Entrez la Probabilité de gain (0-100)", "Probabilité", val))
-    {
-      f = (float)atof(val.GetChars());
-      if (f < 0.0f) f = 0.0f;
-      if (f > 100.0f) f = 100.0f;
-      inputProba.SetFloat(f);
-    }
-
-    // Reset pour éviter relance
+    sc.AddMessageToLog("➡️ Pour modifier les paramètres EV (Target, Risque, Proba), ouvrez le panneau d'étude et ajustez les inputs.", 0);
     sc.MenuEventID = 0;
   }
 
@@ -87,7 +60,7 @@ SCSFExport scsf_EVCalculator_Interactive(SCStudyInterfaceRef sc)
   tool.AddAsUserDrawnDrawing = false;
   tool.LineNumber = 1;
   tool.Text = text;
-  tool.Color = ev >= 0 ? RGB(0, 255, 0) : RGB(255, 0, 0); // vert ou rouge
+  tool.Color = RGB(0, 255, 0); // couleur fixe
   tool.FontSize = 12;
   tool.FontBold = true;
   tool.BeginIndex = index;
