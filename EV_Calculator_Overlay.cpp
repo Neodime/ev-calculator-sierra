@@ -1,8 +1,11 @@
 #include "sierrachart.h"
 
-SCDLLName("EV Calculator - Overlay Mode")
+SCDLLName("EV Calculator - Menu Inputs")
 
-SCSFExport scsf_EVCalculator_Overlay(SCStudyInterfaceRef sc)
+// ID unique pour notre menu custom
+const int MENU_ID_EV_INPUTS = 100001;
+
+SCSFExport scsf_EVCalculator_Menu(SCStudyInterfaceRef sc)
 {
   SCInputRef inputTarget = sc.Input[0];
   SCInputRef inputRisque = sc.Input[1];
@@ -10,8 +13,8 @@ SCSFExport scsf_EVCalculator_Overlay(SCStudyInterfaceRef sc)
 
   if (sc.SetDefaults)
   {
-    sc.GraphName = "EV Calculator (Overlay)";
-    sc.StudyDescription = "Affiche l'espérance de valeur (EV) en haut à gauche du graphique.";
+    sc.GraphName = "EV Calculator (Menu Inputs)";
+    sc.StudyDescription = "Affiche l'EV avec modification des inputs via menu contextuel.";
     sc.AutoLoop = 0;
 
     inputTarget.Name = "Target (en R)";
@@ -23,26 +26,55 @@ SCSFExport scsf_EVCalculator_Overlay(SCStudyInterfaceRef sc)
     inputProba.Name = "Probabilité de gain (en %)";
     inputProba.SetFloat(50.0);
 
+    // Enregistre l'entrée de menu personnalisée
+    sc.MenuEventID = MENU_ID_EV_INPUTS;
+
     return;
   }
 
+  // 🎯 Gérer le menu contextuel personnalisé
+  if (sc.MenuEventID == MENU_ID_EV_INPUTS)
+  {
+    SCString prompt;
+    SCString result;
+
+    prompt = "Entrez les valeurs séparées par des virgules :\nTarget,Risque,Proba (%)\nEx: 1.5,-0.75,60";
+    if (sc.InputBox(prompt, "Modifier les paramètres EV", result))
+    {
+      SCStringArray parts;
+      result.Tokenize(",", parts);
+
+      if (parts.GetArraySize() == 3)
+      {
+        float t = atof(parts[0].GetChars());
+        float r = atof(parts[1].GetChars());
+        float p = atof(parts[2].GetChars());
+
+        inputTarget.SetFloat(t);
+        inputRisque.SetFloat(r);
+        inputProba.SetFloat(p);
+      }
+    }
+    sc.MenuEventID = 0; // Reset
+  }
+
+  // 📊 Calcul EV
   float target = inputTarget.GetFloat();
   float risque = inputRisque.GetFloat();
   float proba = inputProba.GetFloat();
 
-  // Clamp probabilité entre 0 et 100
   if (proba < 0.0f) proba = 0.0f;
   if (proba > 100.0f) proba = 100.0f;
 
-  // Calcul de l'espérance de valeur
   float p = proba / 100.0f;
   float ev = p * target + (1.0f - p) * risque;
 
-  // Formatage du texte à afficher
   SCString text;
-  text.Format("📊 EV: %.2f R\n🎯 Target: %.2f R\n📉 Risque: %.2f R\n📈 P(Gain): %.1f%%", ev, target, risque, proba);
+  text.Format("EV: %.2f R | Target: %.2f | Risque: %.2f | P(Gain): %.1f%%", ev, target, risque, proba);
 
-  // Affichage graphique : texte flottant en haut à gauche
+  int index = sc.ArraySize - 1;
+  float price = sc.High[index] + sc.TickSize * 10;
+
   s_UseTool tool;
   tool.Clear();
   tool.ChartNumber = sc.ChartNumber;
@@ -54,10 +86,8 @@ SCSFExport scsf_EVCalculator_Overlay(SCStudyInterfaceRef sc)
   tool.Color = RGB(0, 255, 0);
   tool.FontSize = 12;
   tool.FontBold = true;
-  tool.UseRelativeVerticalPosition = true;
-  tool.UseRelativeHorizontalPosition = true;
-  tool.RelativeVerticalPosition = 0.02f;
-  tool.RelativeHorizontalPosition = 0.01f;
+  tool.BeginIndex = index;
+  tool.BeginValue = price;
 
   sc.UseTool(tool);
 }
