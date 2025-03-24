@@ -71,13 +71,13 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     // Draw upper rectangle
     s_UseTool upperRect;
     upperRect.Clear();
-    upperRect.DrawingType = DRAWING_RECTANGLE_EXT_HOLLOW;
+    upperRect.DrawingType = DRAWING_RECTANGLE_EXT_HIGHLIGHT;
     upperRect.BeginIndex = rectStartBar;
     upperRect.EndIndex = rectEndBar;
     upperRect.BeginValue = upperRectTop;
     upperRect.EndValue = upperRectBottom;
     upperRect.Color = upperRectColor;
-    upperRect.TransparencyLevel = 60;
+    upperRect.TransparencyLevel = 100; // fully transparent background
     upperRect.LineWidth = 1;
     upperRect.AddMethod = UTAM_ADD_OR_ADJUST;
     upperRect.LineNumber = 10001;
@@ -86,13 +86,13 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     // Draw lower rectangle
     s_UseTool lowerRect;
     lowerRect.Clear();
-    lowerRect.DrawingType = DRAWING_RECTANGLE_EXT_HOLLOW;
+    lowerRect.DrawingType = DRAWING_RECTANGLE_EXT_HIGHLIGHT;
     lowerRect.BeginIndex = rectStartBar;
     lowerRect.EndIndex = rectEndBar;
     lowerRect.BeginValue = lowerRectTop;
     lowerRect.EndValue = lowerRectBottom;
     lowerRect.Color = lowerRectColor;
-    lowerRect.TransparencyLevel = 60;
+    lowerRect.TransparencyLevel = 100; // fully transparent background
     lowerRect.LineWidth = 1;
     lowerRect.AddMethod = UTAM_ADD_OR_ADJUST;
     lowerRect.LineNumber = 10002;
