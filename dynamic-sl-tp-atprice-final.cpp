@@ -28,6 +28,9 @@ SCSFExport scsf_DynamicLines(SCStudyInterfaceRef sc)
         sc.Input[2].Name = "TP Distance (USD)";
         sc.Input[2].SetFloat(200.0f);
 
+        sc.Input[3].Name = "Lines Length (bars)";
+        sc.Input[3].SetInt(10);
+
         return;
     }
 
@@ -36,9 +39,10 @@ SCSFExport scsf_DynamicLines(SCStudyInterfaceRef sc)
     int positionDirection = sc.Input[0].GetIndex();
     float slDistance = sc.Input[1].GetFloat();
     float tpDistance = sc.Input[2].GetFloat();
+    int linesLength = sc.Input[3].GetInt();
 
     int lineStartBar = sc.Index + 1;
-    int lineEndBar = sc.Index + 10;
+    int lineEndBar = sc.Index + linesLength;
 
     float slPrice, tpPrice;
     COLORREF slColor = RGB(255, 182, 193); // Light Red
