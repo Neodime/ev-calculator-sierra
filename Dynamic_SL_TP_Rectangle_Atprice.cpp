@@ -78,7 +78,7 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     // Draw upper rectangle
     s_UseTool upperRect;
     upperRect.Clear();
-    upperRect.DrawingType = DRAWING_RECTANGLE_EXT;
+    upperRect.DrawingType = DRAWING_RECTANGLE_EXT_HOLLOW;
     upperRect.BeginIndex = rectStartBar;
     upperRect.EndIndex = rectEndBar;
     upperRect.BeginValue = upperRectTop;
@@ -94,7 +94,7 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     // Draw lower rectangle
     s_UseTool lowerRect;
     lowerRect.Clear();
-    lowerRect.DrawingType = DRAWING_RECTANGLE_EXT;
+    lowerRect.DrawingType = DRAWING_RECTANGLE_EXT_HOLLOW;
     lowerRect.BeginIndex = rectStartBar;
     lowerRect.EndIndex = rectEndBar;
     lowerRect.BeginValue = lowerRectTop;
