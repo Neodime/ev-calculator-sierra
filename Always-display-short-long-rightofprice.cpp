@@ -1,107 +1,100 @@
 #include "sierrachart.h"
 
-SCDLLName("Always Display Short/Long Right of Price");
+SCDLLName("Dynamic Rectangles Long Short")
 
-SCSFExport scsf_CustomBoxStudy(SCStudyInterfaceRef sc)
+// Enumeration for easier reading of Position Direction
+enum PositionDirectionEnum
 {
-    // Define study inputs on first run.
-    SCInputRef TradeDirection = sc.Input[0];
+    LONG_POSITION = 0,
+    SHORT_POSITION = 1
+};
+
+SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
+{
+    // Define inputs and persistent data once
     if (sc.SetDefaults)
     {
-        sc.GraphName = "Always Display Short/Long Right of Price";
-        sc.StudyDescription = "Displays two boxes (red and green) to the right of the current price. For Trade Direction Short, the red box is above and the green below the price; for Long, the red box is below and the green above.";
-        sc.AutoLoop = 1;      // Process each bar automatically.
-        sc.GraphRegion = 0;   // Overlay on the main price chart.
+        sc.GraphName = "Dynamic Long/Short Rectangles";
 
-        // Trade Direction: "Short" means red box above current price; "Long" means red box below.
-        TradeDirection.Name = "Trade Direction";
-        TradeDirection.SetCustomInputStrings("Short;Long");
-        TradeDirection.SetCustomInputIndex(0);  // Default: Short.
+        sc.AutoLoop = 1;
+        sc.GraphRegion = 0;
 
-        // Red box height in price units.
-        sc.Input[1].Name = "Red Box Height (Price Units)";
-        sc.Input[1].SetFloat(1.0f);
+        // User settings
+        sc.Input[0].Name = "Position Direction";
+        sc.Input[0].SetCustomInputStrings("Long;Short");
+        sc.Input[0].SetCustomInputIndex(0);
 
-        // Green box height in price units.
-        sc.Input[2].Name = "Green Box Height (Price Units)";
-        sc.Input[2].SetFloat(1.0f);
+        sc.Input[1].Name = "Upper Rectangle Height (USD)";
+        sc.Input[1].SetFloat(200.0f);
 
-        // Box width in pixels.
-        sc.Input[3].Name = "Box Width (Pixels)";
-        sc.Input[3].SetInt(20);
+        sc.Input[2].Name = "Lower Rectangle Height (USD)";
+        sc.Input[2].SetFloat(200.0f);
 
         return;
     }
 
-    // Draw the boxes only on the last bar so they always appear at the right of the chart.
-    if (sc.Index != sc.ArraySize - 1)
-        return;
+    // Get current price
+    float currentPrice = sc.Close[sc.Index];
 
-    bool bIsShort = (TradeDirection.GetIndex() == 0);  // 0 = Short, 1 = Long.
-    float CurrentPrice = sc.Close[sc.Index];
+    // Get user-selected settings
+    int positionDirection = sc.Input[0].GetIndex();
+    float upperHeight = sc.Input[1].GetFloat();
+    float lowerHeight = sc.Input[2].GetFloat();
 
-    float RedBoxHeight = sc.Input[1].GetFloat();
-    float GreenBoxHeight = sc.Input[2].GetFloat();
-    int BoxWidth = sc.Input[3].GetInt();
+    // Define rectangle positions (to the right of current price)
+    int rectStartBar = sc.Index;
+    int rectEndBar = sc.Index + 10; // Rectangle length of 10 bars, adjustable if needed
 
-    // Determine the price boundaries for each box.
-    float redPriceTop, redPriceBottom, greenPriceTop, greenPriceBottom;
-    if (bIsShort)
+    // Upper rectangle coordinates
+    float upperRectTop = currentPrice + upperHeight;
+    float upperRectBottom = currentPrice;
+
+    // Lower rectangle coordinates
+    float lowerRectTop = currentPrice;
+    float lowerRectBottom = currentPrice - lowerHeight;
+
+    // Colors based on Position Direction selection
+    COLORREF upperRectColor;
+    COLORREF lowerRectColor;
+
+    if (positionDirection == LONG_POSITION)
     {
-        // For Short: red box above the price; green box below.
-        redPriceBottom = CurrentPrice;
-        redPriceTop = CurrentPrice + RedBoxHeight;
-        greenPriceTop = CurrentPrice;
-        greenPriceBottom = CurrentPrice - GreenBoxHeight;
+        upperRectColor = RGB(0, 255, 0); // Green
+        lowerRectColor = RGB(255, 0, 0); // Red
     }
-    else
+    else // SHORT_POSITION
     {
-        // For Long: red box below the price; green box above.
-        redPriceTop = CurrentPrice;
-        redPriceBottom = CurrentPrice - RedBoxHeight;
-        greenPriceBottom = CurrentPrice;
-        greenPriceTop = CurrentPrice + GreenBoxHeight;
+        upperRectColor = RGB(255, 0, 0); // Red
+        lowerRectColor = RGB(0, 255, 0); // Green
     }
 
-    // Convert the x-coordinate of the last bar to a pixel coordinate.
-    int leftX = sc.GetXFromBarIndex(sc.ArraySize - 1);
-    int rightX = leftX + BoxWidth;
+    // Draw upper rectangle
+    s_UseTool upperRect;
+    upperRect.Clear();
+    upperRect.DrawingType = DRAWING_RECTANGLE_EXT_HIGHLIGHT;
+    upperRect.BeginIndex = rectStartBar;
+    upperRect.EndIndex = rectEndBar;
+    upperRect.BeginValue = upperRectTop;
+    upperRect.EndValue = upperRectBottom;
+    upperRect.Color = upperRectColor;
+    upperRect.TransparencyLevel = 70;
+    upperRect.LineWidth = 1;
+    upperRect.AddMethod = UTAM_ADD_OR_ADJUST;
+    upperRect.UniqueID = 10001;
+    sc.UseTool(upperRect);
 
-    // Convert price levels to pixel y-coordinates.
-    int redTopPixel = sc.GetYFromPrice(redPriceTop);
-    int redBottomPixel = sc.GetYFromPrice(redPriceBottom);
-    // Determine the top (smaller pixel value) and bottom.
-    int redTop = (redTopPixel < redBottomPixel ? redTopPixel : redBottomPixel);
-    int redBottom = (redTopPixel < redBottomPixel ? redBottomPixel : redTopPixel);
-
-    int greenTopPixel = sc.GetYFromPrice(greenPriceTop);
-    int greenBottomPixel = sc.GetYFromPrice(greenPriceBottom);
-    int greenTop = (greenTopPixel < greenBottomPixel ? greenTopPixel : greenBottomPixel);
-    int greenBottom = (greenTopPixel < greenBottomPixel ? greenBottomPixel : greenTopPixel);
-
-    // Create a graphics rectangle and brush for the red box.
-    n_ACSIL::s_GraphicsRectangle redRect;
-    redRect.Left = leftX;
-    redRect.Top = redTop;
-    redRect.Right = rightX;
-    redRect.Bottom = redBottom;
-
-    n_ACSIL::s_GraphicsBrush redBrush;
-    redBrush.Color = RGB(255, 150, 150);  // Light red.
-
-    // Fill the red rectangle.
-    sc.FillRectangle(redRect, redBrush);
-
-    // Create a graphics rectangle and brush for the green box.
-    n_ACSIL::s_GraphicsRectangle greenRect;
-    greenRect.Left = leftX;
-    greenRect.Top = greenTop;
-    greenRect.Right = rightX;
-    greenRect.Bottom = greenBottom;
-
-    n_ACSIL::s_GraphicsBrush greenBrush;
-    greenBrush.Color = RGB(150, 255, 150);  // Light green.
-
-    // Fill the green rectangle.
-    sc.FillRectangle(greenRect, greenBrush);
+    // Draw lower rectangle
+    s_UseTool lowerRect;
+    lowerRect.Clear();
+    lowerRect.DrawingType = DRAWING_RECTANGLE_EXT_HIGHLIGHT;
+    lowerRect.BeginIndex = rectStartBar;
+    lowerRect.EndIndex = rectEndBar;
+    lowerRect.BeginValue = lowerRectTop;
+    lowerRect.EndValue = lowerRectBottom;
+    lowerRect.Color = lowerRectColor;
+    lowerRect.TransparencyLevel = 70;
+    lowerRect.LineWidth = 1;
+    lowerRect.AddMethod = UTAM_ADD_OR_ADJUST;
+    lowerRect.UniqueID = 10002;
+    sc.UseTool(lowerRect);
 }
