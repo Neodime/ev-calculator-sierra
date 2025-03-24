@@ -1,6 +1,6 @@
-#include \"sierrachart.h\"
+#include "sierrachart.h"
 
-SCDLLName(\"Dynamic Rectangles Long Short\")
+SCDLLName("Dynamic Rectangles Long Short")
 
 // Enumeration for easier reading of Position Direction
 enum PositionDirectionEnum
@@ -14,20 +14,20 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     // Define inputs and persistent data once
     if (sc.SetDefaults)
     {
-        sc.GraphName = \"Dynamic Long/Short Rectangles\";
+        sc.GraphName = "Dynamic Long/Short Rectangles";
 
         sc.AutoLoop = 1;
         sc.GraphRegion = 0;
 
         // User settings
-        sc.Input[0].Name = \"Position Direction\";
-        sc.Input[0].SetCustomInputStrings(\"Long;Short\");
+        sc.Input[0].Name = "Position Direction";
+        sc.Input[0].SetCustomInputStrings("Long;Short");
         sc.Input[0].SetCustomInputIndex(0);
 
-        sc.Input[1].Name = \"Upper Rectangle Height (USD)\";
+        sc.Input[1].Name = "Upper Rectangle Height (USD)";
         sc.Input[1].SetFloat(200.0f);
 
-        sc.Input[2].Name = \"Lower Rectangle Height (USD)\";
+        sc.Input[2].Name = "Lower Rectangle Height (USD)";
         sc.Input[2].SetFloat(200.0f);
 
         return;
