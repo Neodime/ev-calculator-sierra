@@ -9,14 +9,14 @@ SCSFExport scsf_CustomBoxStudy(SCStudyInterfaceRef sc)
     if (sc.SetDefaults)
     {
         sc.GraphName = "Always Display Short/Long Right of Price";
-        sc.StudyDescription = "Displays a filled red and green rectangle on the right side of the price. Their placement depends on the Trade Direction input (Short: red above, green below; Long: red below, green above).";
-        sc.AutoLoop = 1;
-        sc.GraphRegion = 0; // Overlay on the main price graph
+        sc.StudyDescription = "Displays two boxes (red and green) to the right of the current price. For Trade Direction Short, the red box is above and the green below the price; for Long, the red box is below and the green above.";
+        sc.AutoLoop = 1;      // Process each bar automatically.
+        sc.GraphRegion = 0;   // Overlay on the main price chart.
 
-        // Trade Direction: "Short" means red box will be drawn above current price, "Long" means red box below.
+        // Trade Direction: "Short" means red box above current price; "Long" means red box below.
         TradeDirection.Name = "Trade Direction";
         TradeDirection.SetCustomInputStrings("Short;Long");
-        TradeDirection.SetCustomInputIndex(0); // Default: Short
+        TradeDirection.SetCustomInputIndex(0);  // Default: Short.
 
         // Red box height in price units.
         sc.Input[1].Name = "Red Box Height (Price Units)";
@@ -33,22 +33,22 @@ SCSFExport scsf_CustomBoxStudy(SCStudyInterfaceRef sc)
         return;
     }
 
-    // Only draw on the last bar so the rectangles appear on the right of the price.
+    // Draw the boxes only on the last bar so they always appear at the right of the chart.
     if (sc.Index != sc.ArraySize - 1)
         return;
 
-    bool IsShort = (TradeDirection.GetIndex() == 0);  // 0 = Short, 1 = Long.
+    bool bIsShort = (TradeDirection.GetIndex() == 0);  // 0 = Short, 1 = Long.
     float CurrentPrice = sc.Close[sc.Index];
 
     float RedBoxHeight = sc.Input[1].GetFloat();
     float GreenBoxHeight = sc.Input[2].GetFloat();
     int BoxWidth = sc.Input[3].GetInt();
 
-    // Determine the top and bottom price for each box based on Trade Direction.
+    // Determine the price boundaries for each box.
     float redPriceTop, redPriceBottom, greenPriceTop, greenPriceBottom;
-    if (IsShort)
+    if (bIsShort)
     {
-        // Short: red box above current price, green box below.
+        // For Short: red box above the price; green box below.
         redPriceBottom = CurrentPrice;
         redPriceTop = CurrentPrice + RedBoxHeight;
         greenPriceTop = CurrentPrice;
@@ -56,7 +56,7 @@ SCSFExport scsf_CustomBoxStudy(SCStudyInterfaceRef sc)
     }
     else
     {
-        // Long: red box below current price, green box above.
+        // For Long: red box below the price; green box above.
         redPriceTop = CurrentPrice;
         redPriceBottom = CurrentPrice - RedBoxHeight;
         greenPriceBottom = CurrentPrice;
@@ -64,12 +64,13 @@ SCSFExport scsf_CustomBoxStudy(SCStudyInterfaceRef sc)
     }
 
     // Convert the x-coordinate of the last bar to a pixel coordinate.
-    int leftRect = sc.GetXFromBarIndex(sc.ArraySize - 1);
-    int rightRect = leftRect + BoxWidth;
+    int leftX = sc.GetXFromBarIndex(sc.ArraySize - 1);
+    int rightX = leftX + BoxWidth;
 
     // Convert price levels to pixel y-coordinates.
     int redTopPixel = sc.GetYFromPrice(redPriceTop);
     int redBottomPixel = sc.GetYFromPrice(redPriceBottom);
+    // Determine the top (smaller pixel value) and bottom.
     int redTop = (redTopPixel < redBottomPixel ? redTopPixel : redBottomPixel);
     int redBottom = (redTopPixel < redBottomPixel ? redBottomPixel : redTopPixel);
 
@@ -78,23 +79,29 @@ SCSFExport scsf_CustomBoxStudy(SCStudyInterfaceRef sc)
     int greenTop = (greenTopPixel < greenBottomPixel ? greenTopPixel : greenBottomPixel);
     int greenBottom = (greenTopPixel < greenBottomPixel ? greenBottomPixel : greenTopPixel);
 
-    // Draw filled rectangles using documented ACSIL functions.
-    n_ACSIL::s_GraphicsRectangle rect;
-    n_ACSIL::s_GraphicsBrush brush;
+    // Create a graphics rectangle and brush for the red box.
+    n_ACSIL::s_GraphicsRectangle redRect;
+    redRect.Left = leftX;
+    redRect.Top = redTop;
+    redRect.Right = rightX;
+    redRect.Bottom = redBottom;
 
-    // Draw the red rectangle.
-    rect.Left = leftRect;
-    rect.Top = redTop;
-    rect.Right = rightRect;
-    rect.Bottom = redBottom;
-    brush.Color = RGB(255, 150, 150);  // Light red.
-    sc.FillRectangle(rect, brush);
+    n_ACSIL::s_GraphicsBrush redBrush;
+    redBrush.Color = RGB(255, 150, 150);  // Light red.
 
-    // Draw the green rectangle.
-    rect.Left = leftRect;
-    rect.Top = greenTop;
-    rect.Right = rightRect;
-    rect.Bottom = greenBottom;
-    brush.Color = RGB(150, 255, 150);  // Light green.
-    sc.FillRectangle(rect, brush);
+    // Fill the red rectangle.
+    sc.FillRectangle(redRect, redBrush);
+
+    // Create a graphics rectangle and brush for the green box.
+    n_ACSIL::s_GraphicsRectangle greenRect;
+    greenRect.Left = leftX;
+    greenRect.Top = greenTop;
+    greenRect.Right = rightX;
+    greenRect.Bottom = greenBottom;
+
+    n_ACSIL::s_GraphicsBrush greenBrush;
+    greenBrush.Color = RGB(150, 255, 150);  // Light green.
+
+    // Fill the green rectangle.
+    sc.FillRectangle(greenRect, greenBrush);
 }
