@@ -30,6 +30,9 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
         sc.Input[2].Name = "TP Height (USD)";
         sc.Input[2].SetFloat(200.0f);
 
+        sc.Input[3].Name = "Rectangle Border Transparency (%)";
+        sc.Input[3].SetInt(40);
+
         return;
     }
 
@@ -40,6 +43,7 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     int positionDirection = sc.Input[0].GetIndex();
     float slHeight = sc.Input[1].GetFloat();
     float tpHeight = sc.Input[2].GetFloat();
+    int borderTransparency = sc.Input[3].GetInt();
 
     // Define rectangle positions (to the right of current price)
     int rectStartBar = sc.Index;
@@ -74,13 +78,14 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     // Draw upper rectangle
     s_UseTool upperRect;
     upperRect.Clear();
-    upperRect.DrawingType = DRAWING_RECTANGLE_EXT_HIGHLIGHT;
+    upperRect.DrawingType = DRAWING_RECTANGLE_EXT;
     upperRect.BeginIndex = rectStartBar;
     upperRect.EndIndex = rectEndBar;
     upperRect.BeginValue = upperRectTop;
     upperRect.EndValue = upperRectBottom;
     upperRect.Color = upperRectColor;
-    upperRect.TransparencyLevel = 70;
+    upperRect.SecondaryColor = upperRectColor;
+    upperRect.TransparencyLevel = borderTransparency;
     upperRect.LineWidth = 1;
     upperRect.AddMethod = UTAM_ADD_OR_ADJUST;
     upperRect.LineNumber = 10001;
@@ -89,13 +94,14 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     // Draw lower rectangle
     s_UseTool lowerRect;
     lowerRect.Clear();
-    lowerRect.DrawingType = DRAWING_RECTANGLE_EXT_HIGHLIGHT;
+    lowerRect.DrawingType = DRAWING_RECTANGLE_EXT;
     lowerRect.BeginIndex = rectStartBar;
     lowerRect.EndIndex = rectEndBar;
     lowerRect.BeginValue = lowerRectTop;
     lowerRect.EndValue = lowerRectBottom;
     lowerRect.Color = lowerRectColor;
-    lowerRect.TransparencyLevel = 70;
+    lowerRect.SecondaryColor = lowerRectColor;
+    lowerRect.TransparencyLevel = borderTransparency;
     lowerRect.LineWidth = 1;
     lowerRect.AddMethod = UTAM_ADD_OR_ADJUST;
     lowerRect.LineNumber = 10002;
