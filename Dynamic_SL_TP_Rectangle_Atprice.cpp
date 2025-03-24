@@ -1,6 +1,6 @@
 #include "sierrachart.h"
 
-SCDLLName("Dynamic SL TP Rectangles")
+SCDLLName("Dynamic Long/Short Rectangles")
 
 // Enumeration for easier reading of Position Direction
 enum PositionDirectionEnum
@@ -14,7 +14,7 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     // Define inputs and persistent data once
     if (sc.SetDefaults)
     {
-        sc.GraphName = "Dynamic SL/TP Rectangles";
+        sc.GraphName = "Dynamic Long/Short Rectangles";
 
         sc.AutoLoop = 1;
         sc.GraphRegion = 0;
@@ -24,14 +24,11 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
         sc.Input[0].SetCustomInputStrings("Long;Short");
         sc.Input[0].SetCustomInputIndex(0);
 
-        sc.Input[1].Name = "SL Height (USD)";
+        sc.Input[1].Name = "Upper Rectangle Height (USD)";
         sc.Input[1].SetFloat(200.0f);
 
-        sc.Input[2].Name = "TP Height (USD)";
+        sc.Input[2].Name = "Lower Rectangle Height (USD)";
         sc.Input[2].SetFloat(200.0f);
-
-        sc.Input[3].Name = "Rectangle Border Transparency (%)";
-        sc.Input[3].SetInt(40);
 
         return;
     }
@@ -41,38 +38,34 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
 
     // Get user-selected settings
     int positionDirection = sc.Input[0].GetIndex();
-    float slHeight = sc.Input[1].GetFloat();
-    float tpHeight = sc.Input[2].GetFloat();
-    int borderTransparency = sc.Input[3].GetInt();
+    float upperHeight = sc.Input[1].GetFloat();
+    float lowerHeight = sc.Input[2].GetFloat();
 
     // Define rectangle positions (to the right of current price)
     int rectStartBar = sc.Index;
     int rectEndBar = sc.Index + 10; // Rectangle length of 10 bars, adjustable if needed
 
-    float upperRectTop, upperRectBottom, lowerRectTop, lowerRectBottom;
-    COLORREF upperRectColor, lowerRectColor;
+    // Upper rectangle coordinates
+    float upperRectTop = currentPrice + upperHeight;
+    float upperRectBottom = currentPrice;
+
+    // Lower rectangle coordinates
+    float lowerRectTop = currentPrice;
+    float lowerRectBottom = currentPrice - lowerHeight;
+
+    // Colors based on Position Direction selection
+    COLORREF upperRectColor;
+    COLORREF lowerRectColor;
 
     if (positionDirection == LONG_POSITION)
     {
-        // TP above, SL below for long positions
-        upperRectTop = currentPrice + tpHeight;
-        upperRectBottom = currentPrice;
-        lowerRectTop = currentPrice;
-        lowerRectBottom = currentPrice - slHeight;
-
-        upperRectColor = RGB(0, 255, 0); // Green for TP
-        lowerRectColor = RGB(255, 0, 0); // Red for SL
+        upperRectColor = RGB(144, 238, 144); // Light Green
+        lowerRectColor = RGB(255, 182, 193); // Light Red (pinkish)
     }
     else // SHORT_POSITION
     {
-        // SL above, TP below for short positions
-        upperRectTop = currentPrice + slHeight;
-        upperRectBottom = currentPrice;
-        lowerRectTop = currentPrice;
-        lowerRectBottom = currentPrice - tpHeight;
-
-        upperRectColor = RGB(255, 0, 0); // Red for SL
-        lowerRectColor = RGB(0, 255, 0); // Green for TP
+        upperRectColor = RGB(255, 182, 193); // Light Red (pinkish)
+        lowerRectColor = RGB(144, 238, 144); // Light Green
     }
 
     // Draw upper rectangle
@@ -84,8 +77,7 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     upperRect.BeginValue = upperRectTop;
     upperRect.EndValue = upperRectBottom;
     upperRect.Color = upperRectColor;
-    upperRect.SecondaryColor = upperRectColor;
-    upperRect.TransparencyLevel = borderTransparency;
+    upperRect.TransparencyLevel = 60;
     upperRect.LineWidth = 1;
     upperRect.AddMethod = UTAM_ADD_OR_ADJUST;
     upperRect.LineNumber = 10001;
@@ -100,8 +92,7 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     lowerRect.BeginValue = lowerRectTop;
     lowerRect.EndValue = lowerRectBottom;
     lowerRect.Color = lowerRectColor;
-    lowerRect.SecondaryColor = lowerRectColor;
-    lowerRect.TransparencyLevel = borderTransparency;
+    lowerRect.TransparencyLevel = 60;
     lowerRect.LineWidth = 1;
     lowerRect.AddMethod = UTAM_ADD_OR_ADJUST;
     lowerRect.LineNumber = 10002;
