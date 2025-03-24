@@ -1,6 +1,6 @@
 #include "sierrachart.h"
 
-SCDLLName("Dynamic Long/Short Rectangles")
+SCDLLName("Dynamic SL/TP Rectangles")
 
 // Enumeration for easier reading of Position Direction
 enum PositionDirectionEnum
@@ -14,7 +14,7 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
     // Define inputs and persistent data once
     if (sc.SetDefaults)
     {
-        sc.GraphName = "Dynamic Long/Short Rectangles";
+        sc.GraphName = "Dynamic SL/TP Rectangles";
 
         sc.AutoLoop = 1;
         sc.GraphRegion = 0;
@@ -24,10 +24,10 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
         sc.Input[0].SetCustomInputStrings("Long;Short");
         sc.Input[0].SetCustomInputIndex(0);
 
-        sc.Input[1].Name = "Upper Rectangle Height (USD)";
+        sc.Input[1].Name = "SL Height (USD)";
         sc.Input[1].SetFloat(200.0f);
 
-        sc.Input[2].Name = "Lower Rectangle Height (USD)";
+        sc.Input[2].Name = "TP Height (USD)";
         sc.Input[2].SetFloat(200.0f);
 
         return;
@@ -38,34 +38,35 @@ SCSFExport scsf_DynamicRectangles(SCStudyInterfaceRef sc)
 
     // Get user-selected settings
     int positionDirection = sc.Input[0].GetIndex();
-    float upperHeight = sc.Input[1].GetFloat();
-    float lowerHeight = sc.Input[2].GetFloat();
+    float slHeight = sc.Input[1].GetFloat();
+    float tpHeight = sc.Input[2].GetFloat();
 
     // Define rectangle positions (to the right of current price)
     int rectStartBar = sc.Index;
     int rectEndBar = sc.Index + 10; // Rectangle length of 10 bars, adjustable if needed
 
-    // Upper rectangle coordinates
-    float upperRectTop = currentPrice + upperHeight;
-    float upperRectBottom = currentPrice;
-
-    // Lower rectangle coordinates
-    float lowerRectTop = currentPrice;
-    float lowerRectBottom = currentPrice - lowerHeight;
-
-    // Colors based on Position Direction selection
-    COLORREF upperRectColor;
-    COLORREF lowerRectColor;
+    float upperRectTop, upperRectBottom, lowerRectTop, lowerRectBottom;
+    COLORREF upperRectColor, lowerRectColor;
 
     if (positionDirection == LONG_POSITION)
     {
-        upperRectColor = RGB(144, 238, 144); // Light Green
-        lowerRectColor = RGB(255, 182, 193); // Light Red (pinkish)
+        upperRectTop = currentPrice + tpHeight;
+        upperRectBottom = currentPrice;
+        lowerRectTop = currentPrice;
+        lowerRectBottom = currentPrice - slHeight;
+
+        upperRectColor = RGB(144, 238, 144); // Light Green (TP)
+        lowerRectColor = RGB(255, 182, 193); // Light Red (SL)
     }
     else // SHORT_POSITION
     {
-        upperRectColor = RGB(255, 182, 193); // Light Red (pinkish)
-        lowerRectColor = RGB(144, 238, 144); // Light Green
+        upperRectTop = currentPrice + slHeight;
+        upperRectBottom = currentPrice;
+        lowerRectTop = currentPrice;
+        lowerRectBottom = currentPrice - tpHeight;
+
+        upperRectColor = RGB(255, 182, 193); // Light Red (SL)
+        lowerRectColor = RGB(144, 238, 144); // Light Green (TP)
     }
 
     // Draw upper rectangle
