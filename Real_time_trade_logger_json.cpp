@@ -51,20 +51,19 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
                 FirstEntry = false;
 
             File << "{"
-                << "\"DateTime\":\"" << sc.DateTimeToString(FillData.DateTime) << "\"," 
+                << "\"FillDateTime\":\"" << sc.DateTimeToString(FillData.FillDateTime, FLAG_DT_COMPLETE_DATETIME_MS) << "\"," 
                 << "\"Symbol\":\"" << FillData.Symbol << "\"," 
-                << "\"Exchange\":\"" << FillData.Exchange << "\"," 
-                << "\"FillPrice\":" << FillData.FillPrice << "," 
-                << "\"FillQuantity\":" << FillData.FillQuantity << "," 
-                << "\"BuySell\":\"" << ((FillData.BuySell == BSE_BUY) ? "BUY" : "SELL") << "\"," 
-                << "\"OrderType\":" << FillData.OrderType << "," 
-                << "\"FillExecutionServiceID\":\"" << FillData.FillExecutionServiceID << "\"," 
                 << "\"TradeAccount\":\"" << FillData.TradeAccount << "\"," 
-                << "\"OpenClose\":\"" << FillData.OpenClose << "\"," 
-                << "\"ParentInternalOrderID\":" << FillData.ParentInternalOrderID << "," 
-                << "\"InternalOrderID\":" << FillData.InternalOrderID << "," 
-                << "\"FillCommission\":" << FillData.FillCommission << "," 
-                << "\"FillDateTime\":\"" << sc.DateTimeToString(FillData.FillDateTime) << "\"}"
+                << "\"InternalOrderID\":" << FillData.InternalOrderID << ","
+                << "\"Quantity\":" << FillData.Quantity << "," 
+                << "\"FillPrice\":" << FillData.FillPrice << ","
+                << "\"BuySell\":\"" << ((FillData.BuySell == BSE_BUY) ? "BUY" : "SELL") << "\"," 
+                << "\"FillExecutionServiceID\":\"" << FillData.FillExecutionServiceID << "\"," 
+                << "\"TradePositionQuantity\":" << FillData.TradePositionQuantity << ","
+                << "\"IsSimulated\":" << FillData.IsSimulated << ","
+                << "\"OrderActionSource\":\"" << FillData.OrderActionSource << "\"," 
+                << "\"Note\":\"" << FillData.Note << "\"," 
+                << "\"ServiceOrderID\":\"" << FillData.ServiceOrderID << "\"}"
                 ;
         }
     }
