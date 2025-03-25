@@ -20,7 +20,6 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
         return;
     }
 
-    // File path
     const char* FilePath = "C:\\Users\\timog\\Documents\\Trading\\Sierra Jason Trades\\trade_log.json";
 
     int& LastFillIndexProcessed = sc.GetPersistentInt(LAST_PROCESSED_FILL_INDEX);
@@ -39,12 +38,15 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
     }
 
     s_SCOrderFillData FillData;
+    s_SCTradeOrder TradeOrder;
 
     // Fetch and process new fills
     for (int FillIndex = LastFillIndexProcessed; FillIndex < TotalFills; FillIndex++)
     {
         if (sc.GetOrderFillEntry(FillIndex, FillData))
         {
+            sc.GetOrderByOrderID(FillData.InternalOrderID, TradeOrder);
+
             if (!FirstEntry)
                 File << ",\n";
             else
@@ -63,7 +65,7 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
                 << "\"IsSimulated\":" << FillData.IsSimulated << ","
                 << "\"OrderActionSource\":\"" << FillData.OrderActionSource << "\"," 
                 << "\"Note\":\"" << FillData.Note << "\"," 
-                << "\"ServiceOrderID\":\"" << FillData.ServiceOrderID << "\"}"
+                << "\"OrderType\":\"" << TradeOrder.OrderType << "\"}"
                 ;
         }
     }
