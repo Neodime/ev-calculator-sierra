@@ -1,5 +1,6 @@
 #include "sierrachart.h"
 #include <fstream>
+#include <filesystem>
 
 SCDLLName("RealTime Trade Logger")
 
@@ -26,7 +27,7 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
 
     int TotalFills = sc.GetOrderFillArraySize();
 
-    bool FirstEntry = (LastFillIndexProcessed == 0);
+    bool FileExists = std::filesystem::exists(FilePath);
 
     std::ofstream File;
     File.open(FilePath, std::ios::app);
@@ -36,6 +37,9 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
         sc.AddMessageToLog("Error: Cannot open trade log file.", 1);
         return;
     }
+
+    if (!FileExists)
+        File << "[\n";
 
     s_SCOrderFillData FillData;
     s_SCTradeOrder TradeOrder;
@@ -47,10 +51,8 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
         {
             sc.GetOrderByOrderID(FillData.InternalOrderID, TradeOrder);
 
-            if (!FirstEntry)
+            if (FillIndex > 0 || FileExists)
                 File << ",\n";
-            else
-                FirstEntry = false;
 
             File << "{"
                 << "\"FillDateTime\":\"" << sc.DateTimeToString(FillData.FillDateTime, FLAG_DT_COMPLETE_DATETIME_MS) << "\"," 
