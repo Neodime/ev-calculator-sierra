@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include "sierrachart.h"
 #include <fstream>
 
