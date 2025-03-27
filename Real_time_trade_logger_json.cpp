@@ -1,10 +1,16 @@
 #define NOMINMAX
 #include "sierrachart.h"
 #include <fstream>
+#include <sys/stat.h>
 
 SCDLLName("RealTime Trade Logger")
 
 const int LAST_PROCESSED_FILL_INDEX = 0;
+
+bool FileExists(const char* path) {
+    struct stat buffer;
+    return (stat(path, &buffer) == 0);
+}
 
 SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
 {
@@ -15,51 +21,54 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
 
         sc.AutoLoop = 0;
         sc.UpdateAlways = 1;
-        sc.ReceivePointerEvents = 0;
-
         return;
     }
 
     const char* FilePath = "C:\\Users\\timog\\Documents\\Trading\\Sierra Jason Trades\\trade_log.json";
-
     int& LastFillIndexProcessed = sc.GetPersistentInt(LAST_PROCESSED_FILL_INDEX);
-
     int TotalFills = sc.GetOrderFillArraySize();
-
-    bool FileExists;
-    std::ifstream CheckFile(FilePath);
-    FileExists = CheckFile.good();
-    CheckFile.close();
-
-    std::fstream File;
-
-    if (!FileExists)
-    {
-        File.open(FilePath, std::ios::out);
-        File << "[\n";
-        File.close();
-    }
-
-    File.open(FilePath, std::ios::in | std::ios::out);
-
-    if (!File.is_open())
-    {
-        sc.AddMessageToLog("Error: Cannot open trade log file.", 1);
-        return;
-    }
-
-    File.seekp(0, std::ios::end);
-
-    bool FirstEntry = (File.tellp() <= 2);
-
-    if (!FirstEntry)
-    {
-        File.seekp(-2, std::ios::end);
-        File << ",\n";
-    }
 
     s_SCOrderFillData FillData;
     s_SCTradeOrder TradeOrder;
+
+    bool fileExists = FileExists(FilePath);
+    bool isEmpty = true;
+
+    if (fileExists)
+    {
+        std::ifstream infile(FilePath, std::ios::ate | std::ios::binary);
+        isEmpty = (infile.tellg() == 0);
+        infile.close();
+    }
+
+    std::fstream file;
+
+    if (!fileExists || isEmpty)
+    {
+        file.open(FilePath, std::ios::out);
+        file << "[\n";
+    }
+    else
+    {
+        file.open(FilePath, std::ios::in | std::ios::out | std::ios::binary);
+        file.seekp(-1, std::ios::end);
+
+        char ch;
+        do {
+            file.seekp(-1, std::ios::cur);
+            file.get(ch);
+            file.seekp(-1, std::ios::cur);
+        } while (ch != ']' && file.tellp() > 0);
+
+        if (ch == ']') {
+            file.seekp(-1, std::ios::cur);
+            file << ",\n";
+        } else {
+            sc.AddMessageToLog("Error: JSON closing bracket not found.", 1);
+            file.close();
+            return;
+        }
+    }
 
     for (int FillIndex = LastFillIndexProcessed; FillIndex < TotalFills; FillIndex++)
     {
@@ -67,7 +76,7 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
         {
             sc.GetOrderByOrderID(FillData.InternalOrderID, TradeOrder);
 
-            File << "  {"
+            file << "  {"
                  << "\"FillDateTime\":\"" << sc.DateTimeToString(FillData.FillDateTime, FLAG_DT_COMPLETE_DATETIME_MS) << "\"," 
                  << "\"Symbol\":\"" << FillData.Symbol << "\"," 
                  << "\"TradeAccount\":\"" << FillData.TradeAccount << "\"," 
@@ -80,11 +89,16 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
                  << "\"IsSimulated\":" << FillData.IsSimulated << ","
                  << "\"OrderActionSource\":\"" << FillData.OrderActionSource << "\"," 
                  << "\"Note\":\"" << FillData.Note << "\"," 
-                 << "\"OrderType\":\"" << TradeOrder.OrderType << "\"}\n]";
+                 << "\"OrderType\":\"" << TradeOrder.OrderType << "\"}\n";
+
+            if (FillIndex < TotalFills - 1)
+                file << ",\n";
         }
     }
 
-    File.close();
+    file << "]";
+
+    file.close();
 
     LastFillIndexProcessed = TotalFills;
 }
