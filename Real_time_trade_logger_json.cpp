@@ -4,7 +4,6 @@
 
 SCDLLName("RealTime Trade Logger")
 
-// Persistent variable index
 const int LAST_PROCESSED_FILL_INDEX = 0;
 
 SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
@@ -14,7 +13,7 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
         sc.GraphName = "Real-Time Trade Logger";
         sc.StudyDescription = "Logs trades from Order Fill Data to a JSON file.";
 
-        sc.AutoLoop = 0;  // Manual looping
+        sc.AutoLoop = 0;
         sc.UpdateAlways = 1;
         sc.ReceivePointerEvents = 0;
 
@@ -27,14 +26,21 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
 
     int TotalFills = sc.GetOrderFillArraySize();
 
-    bool IsFileEmpty = false;
-    std::ifstream infile(FilePath);
-    infile.seekg(0, std::ios::end);
-    IsFileEmpty = (infile.tellg() == 0);
-    infile.close();
+    bool FileExists;
+    std::ifstream CheckFile(FilePath);
+    FileExists = CheckFile.good();
+    CheckFile.close();
 
-    std::ofstream File;
-    File.open(FilePath, std::ios::app);
+    std::fstream File;
+
+    if (!FileExists)
+    {
+        File.open(FilePath, std::ios::out);
+        File << "[\n";
+        File.close();
+    }
+
+    File.open(FilePath, std::ios::in | std::ios::out);
 
     if (!File.is_open())
     {
@@ -42,37 +48,39 @@ SCSFExport scsf_RealTimeTradeLogger(SCStudyInterfaceRef sc)
         return;
     }
 
-    if (IsFileEmpty)
-        File << "[\n";
+    File.seekp(0, std::ios::end);
+
+    bool FirstEntry = (File.tellp() <= 2);
+
+    if (!FirstEntry)
+    {
+        File.seekp(-2, std::ios::end);
+        File << ",\n";
+    }
 
     s_SCOrderFillData FillData;
     s_SCTradeOrder TradeOrder;
 
-    // Fetch and process new fills
     for (int FillIndex = LastFillIndexProcessed; FillIndex < TotalFills; FillIndex++)
     {
         if (sc.GetOrderFillEntry(FillIndex, FillData))
         {
             sc.GetOrderByOrderID(FillData.InternalOrderID, TradeOrder);
 
-            if (FillIndex > LastFillIndexProcessed || !IsFileEmpty)
-                File << ",\n";
-
-            File << "{"
-                << "\"FillDateTime\":\"" << sc.DateTimeToString(FillData.FillDateTime, FLAG_DT_COMPLETE_DATETIME_MS) << "\"," 
-                << "\"Symbol\":\"" << FillData.Symbol << "\"," 
-                << "\"TradeAccount\":\"" << FillData.TradeAccount << "\"," 
-                << "\"InternalOrderID\":" << FillData.InternalOrderID << ","
-                << "\"Quantity\":" << FillData.Quantity << "," 
-                << "\"FillPrice\":" << FillData.FillPrice << ","
-                << "\"BuySell\":\"" << ((FillData.BuySell == BSE_BUY) ? "BUY" : "SELL") << "\"," 
-                << "\"FillExecutionServiceID\":\"" << FillData.FillExecutionServiceID << "\"," 
-                << "\"TradePositionQuantity\":" << FillData.TradePositionQuantity << ","
-                << "\"IsSimulated\":" << FillData.IsSimulated << ","
-                << "\"OrderActionSource\":\"" << FillData.OrderActionSource << "\"," 
-                << "\"Note\":\"" << FillData.Note << "\"," 
-                << "\"OrderType\":\"" << TradeOrder.OrderType << "\"}"
-                ;
+            File << "  {"
+                 << "\"FillDateTime\":\"" << sc.DateTimeToString(FillData.FillDateTime, FLAG_DT_COMPLETE_DATETIME_MS) << "\"," 
+                 << "\"Symbol\":\"" << FillData.Symbol << "\"," 
+                 << "\"TradeAccount\":\"" << FillData.TradeAccount << "\"," 
+                 << "\"InternalOrderID\":" << FillData.InternalOrderID << ","
+                 << "\"Quantity\":" << FillData.Quantity << "," 
+                 << "\"FillPrice\":" << FillData.FillPrice << ","
+                 << "\"BuySell\":\"" << ((FillData.BuySell == BSE_BUY) ? "BUY" : "SELL") << "\"," 
+                 << "\"FillExecutionServiceID\":\"" << FillData.FillExecutionServiceID << "\"," 
+                 << "\"TradePositionQuantity\":" << FillData.TradePositionQuantity << ","
+                 << "\"IsSimulated\":" << FillData.IsSimulated << ","
+                 << "\"OrderActionSource\":\"" << FillData.OrderActionSource << "\"," 
+                 << "\"Note\":\"" << FillData.Note << "\"," 
+                 << "\"OrderType\":\"" << TradeOrder.OrderType << "\"}\n]";
         }
     }
 
