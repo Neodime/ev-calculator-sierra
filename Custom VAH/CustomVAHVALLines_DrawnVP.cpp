@@ -3,11 +3,11 @@
 SCDLLName("Custom VAH/VAL Lines from Drawn VP Revised with VP Study Short Name")
 
 // Helper Function: DeleteVAHVALLines
-// Deletes the drawn VAH and VAL lines if they exist by configuring an s_UseTool
+// Deletes the drawn VAH and VAL lines (if they exist) by configuring an s_UseTool
 // structure with SZM_DELETE and calling sc.UseTool with the appropriate line number.
 void DeleteVAHVALLines(SCStudyInterfaceRef sc)
 {
-    // Retrieve persistent line IDs (returned as int values).
+    // Retrieve persistent line IDs (as int values)
     int pLineID_VAH = sc.GetPersistentInt(1);
     int pLineID_VAL = sc.GetPersistentInt(2);
     
@@ -98,11 +98,11 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
         return;
     }
 
-    // Retrieve VAH and VAL arrays from the VP study (subgraph indices 3 and 4),
-    // adding the third parameter (0) as required.
-    float* vpVAHArray = sc.GetStudyArrayUsingID(vpStudyID, 3, 0);
-    float* vpVALArray = sc.GetStudyArrayUsingID(vpStudyID, 4, 0);
-    if (vpVAHArray == nullptr || vpVALArray == nullptr)
+    // Retrieve VAH and VAL arrays from the VP study (subgraph indices 3 and 4).
+    // The third parameter has been removed to ensure compatibility.
+    SCFloatArrayRef vpVAHArray = sc.GetStudyArrayUsingID(vpStudyID, 3);
+    SCFloatArrayRef vpVALArray = sc.GetStudyArrayUsingID(vpStudyID, 4);
+    if (!vpVAHArray.GetArray() || !vpVALArray.GetArray())
     {
         sc.AddMessageToLog("Error: VAH/VAL arrays not found in the VP study.", 1);
         return;
