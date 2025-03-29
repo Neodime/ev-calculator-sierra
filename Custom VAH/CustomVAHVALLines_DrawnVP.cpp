@@ -4,7 +4,7 @@ SCDLLName("Custom VAH/VAL Lines from Drawn VP Revised with VP Study Short Name")
 
 // Helper Function: DeleteVAHVALLines
 // Deletes the drawn VAH and VAL lines if they exist by configuring an s_UseTool
-// structure with UTAM_DELETE and calling sc.UseTool with the appropriate line number.
+// structure with SZM_DELETE and calling sc.UseTool with the appropriate line number.
 void DeleteVAHVALLines(SCStudyInterfaceRef sc)
 {
     // Retrieve persistent line IDs (returned as int values).
@@ -15,7 +15,7 @@ void DeleteVAHVALLines(SCStudyInterfaceRef sc)
     memset(&Tool, 0, sizeof(Tool));
     Tool.ChartNumber = sc.ChartNumber;
     Tool.DrawingType = DRAWING_HORIZONTALLINE;
-    Tool.AddMethod = UTAM_DELETE;  // Set method to delete the drawing tool.
+    Tool.AddMethod = SZM_DELETE;  // Use SZM_DELETE to delete the drawing tool.
     Tool.Region = sc.GraphRegion;
     Tool.BeginIndex = 0;
     Tool.EndIndex = sc.ArraySize - 1;
@@ -98,9 +98,10 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
         return;
     }
 
-    // Retrieve VAH and VAL arrays from the VP study (subgraph indices 3 and 4).
-    float* vpVAHArray = sc.GetStudyArrayUsingID(vpStudyID, 3);
-    float* vpVALArray = sc.GetStudyArrayUsingID(vpStudyID, 4);
+    // Retrieve VAH and VAL arrays from the VP study (subgraph indices 3 and 4),
+    // adding the third parameter (0) as required.
+    float* vpVAHArray = sc.GetStudyArrayUsingID(vpStudyID, 3, 0);
+    float* vpVALArray = sc.GetStudyArrayUsingID(vpStudyID, 4, 0);
     if (vpVAHArray == nullptr || vpVALArray == nullptr)
     {
         sc.AddMessageToLog("Error: VAH/VAL arrays not found in the VP study.", 1);
