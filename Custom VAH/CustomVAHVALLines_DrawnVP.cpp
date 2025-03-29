@@ -99,6 +99,7 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
     }
 
     // Retrieve VAH and VAL arrays from the VP study (subgraph indices 3 and 4).
+    // Note: We do not supply a third parameter because the documented function accepts only two arguments.
     SCFloatArrayRef vpVAHArray = sc.GetStudyArrayUsingID(vpStudyID, 3);
     SCFloatArrayRef vpVALArray = sc.GetStudyArrayUsingID(vpStudyID, 4);
     if (vpVAHArray.GetArray() == nullptr || vpVALArray.GetArray() == nullptr)
