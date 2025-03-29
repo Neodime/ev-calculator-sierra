@@ -3,11 +3,10 @@
 SCDLLName("Custom VAH/VAL Lines from Drawn VP Revised with VP Study Short Name")
 
 // Helper Function: DeleteVAHVALLines
-// Deletes the drawn VAH and VAL lines (if they exist) by configuring an s_UseTool
-// structure with SZM_DELETE and calling sc.UseTool with the appropriate line number.
+// Deletes the drawn VAH and VAL lines (if they exist) by setting up an s_UseTool structure with SZM_DELETE and calling sc.UseTool.
 void DeleteVAHVALLines(SCStudyInterfaceRef sc)
 {
-    // Retrieve persistent line IDs as integers.
+    // Retrieve persistent line IDs.
     int pLineID_VAH = sc.GetPersistentInt(1);
     int pLineID_VAL = sc.GetPersistentInt(2);
     
@@ -27,7 +26,6 @@ void DeleteVAHVALLines(SCStudyInterfaceRef sc)
         sc.UseTool(Tool);
         sc.SetPersistentInt(1, 0);
     }
-
     // Delete the VAL line if it exists.
     if (pLineID_VAL != 0)
     {
@@ -42,7 +40,7 @@ void DeleteVAHVALLines(SCStudyInterfaceRef sc)
 // then draws white, dashed horizontal lines at these levels. The lines are updated at a user-defined refresh interval.
 SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
 {
-    // Input Definitions
+    // Input Definitions.
     SCInputRef RefreshInterval    = sc.Input[0];
     SCInputRef DisplayCompletedVP = sc.Input[1]; // Option to display lines even if VP is completed.
     SCInputRef VPStudyShortName   = sc.Input[2]; // User-specified short name of the VP study.
@@ -55,34 +53,34 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
         sc.GraphRegion = 0;
         sc.CalculationPrecedence = LOW_PREC_LEVEL;
 
-        // Input: Refresh Interval (number of bars between updates)
+        // Input: Refresh Interval (number of bars between updates).
         RefreshInterval.Name = "Refresh Interval (Bars)";
         RefreshInterval.SetInt(1);
         RefreshInterval.SetIntLimits(1, 1000);
 
-        // Input: Option to display lines even when VP is completed
+        // Input: Option to display lines even when VP is completed.
         DisplayCompletedVP.Name = "Display Lines When VP Completed";
         DisplayCompletedVP.SetYesNo(0); // Default is No.
 
-        // Input: VP Study Short Name (default "Volume Profile")
+        // Input: VP Study Short Name (default "Volume Profile").
         VPStudyShortName.Name = "VP Study Short Name";
         VPStudyShortName.SetString("Volume Profile");
 
         // Initialize persistent integers for storing drawn line IDs.
-        sc.SetPersistentInt(1, 0);  // VAH line ID.
-        sc.SetPersistentInt(2, 0);  // VAL line ID.
+        sc.SetPersistentInt(1, 0);  // For VAH line.
+        sc.SetPersistentInt(2, 0);  // For VAL line.
 
         return;
     }
 
-    // Ensure sc.Index is within valid range.
+    // Defensive Check: Ensure sc.Index is within valid range.
     if (sc.Index < 0 || sc.Index >= sc.ArraySize)
     {
         sc.AddMessageToLog("Error: sc.Index is out of valid range.", 1);
         return;
     }
 
-    // Refresh Control: Update only every X bars.
+    // Refresh Control: Update only every X bars as defined by the refresh interval.
     int refreshInterval = RefreshInterval.GetInt();
     if ((sc.Index % refreshInterval) != 0)
         return;
@@ -99,27 +97,20 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
     }
 
     // Retrieve VAH and VAL arrays from the VP study (subgraph indices 3 and 4).
-    // Note: We do not supply a third parameter because the documented function accepts only two arguments.
-    SCFloatArrayRef vpVAHArray = sc.GetStudyArrayUsingID(vpStudyID, 3);
-    SCFloatArrayRef vpVALArray = sc.GetStudyArrayUsingID(vpStudyID, 4);
-    if (vpVAHArray.GetArray() == nullptr || vpVALArray.GetArray() == nullptr)
+    // The third parameter is supplied as 0.
+    float* vpVAHArray = sc.GetStudyArrayUsingID(vpStudyID, 3, 0);
+    float* vpVALArray = sc.GetStudyArrayUsingID(vpStudyID, 4, 0);
+    if (vpVAHArray == nullptr || vpVALArray == nullptr)
     {
         sc.AddMessageToLog("Error: VAH/VAL arrays not found in the VP study.", 1);
         return;
     }
 
-    // Defensive Check: Ensure sc.Index is within the bounds of the VP arrays.
-    if (sc.Index >= sc.ArraySize)
-    {
-        sc.AddMessageToLog("Error: sc.Index is out of bounds for the VP arrays.", 1);
-        return;
-    }
-
-    // Retrieve current VAH and VAL values.
+    // Retrieve current VAH and VAL values for the current bar.
     float currentVAH = vpVAHArray[sc.Index];
     float currentVAL = vpVALArray[sc.Index];
 
-    // Determine if the VP is "Developing" (current bar is the last bar on the chart).
+    // Determine if the VP is "Developing" (i.e., if the current bar is the last bar on the chart).
     bool vpDeveloping = (sc.Index == sc.ArraySize - 1);
     if (!vpDeveloping && DisplayCompletedVP.GetYesNo() == 0)
     {
@@ -128,7 +119,7 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
         return;
     }
 
-    // Log current VAH and VAL values.
+    // Log the current VAH and VAL values.
     char debugBuffer[256];
     sprintf(debugBuffer, "Updating VAH/VAL lines: VAH = %.2f, VAL = %.2f", currentVAH, currentVAL);
     sc.AddMessageToLog(debugBuffer, 0);
