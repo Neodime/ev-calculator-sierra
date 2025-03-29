@@ -3,13 +3,14 @@
 SCDLLName("Custom VAH/VAL Lines from Drawn VP Revised with VP Study Short Name")
 
 // Helper Function: DeleteVAHVALLines
-// Deletes the drawn VAH and VAL lines (if they exist) by setting up an s_UseTool structure with SZM_DELETE and calling sc.UseTool.
+// Deletes the drawn VAH and VAL lines (if they exist) by setting up an s_UseTool structure with SZM_DELETE
+// and calling sc.UseTool with the appropriate line number.
 void DeleteVAHVALLines(SCStudyInterfaceRef sc)
 {
     // Retrieve persistent line IDs.
     int pLineID_VAH = sc.GetPersistentInt(1);
     int pLineID_VAL = sc.GetPersistentInt(2);
-    
+
     s_UseTool Tool;
     memset(&Tool, 0, sizeof(Tool));
     Tool.ChartNumber = sc.ChartNumber;
@@ -26,6 +27,7 @@ void DeleteVAHVALLines(SCStudyInterfaceRef sc)
         sc.UseTool(Tool);
         sc.SetPersistentInt(1, 0);
     }
+
     // Delete the VAL line if it exists.
     if (pLineID_VAL != 0)
     {
@@ -67,20 +69,20 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
         VPStudyShortName.SetString("Volume Profile");
 
         // Initialize persistent integers for storing drawn line IDs.
-        sc.SetPersistentInt(1, 0);  // For VAH line.
-        sc.SetPersistentInt(2, 0);  // For VAL line.
+        sc.SetPersistentInt(1, 0);  // VAH line ID.
+        sc.SetPersistentInt(2, 0);  // VAL line ID.
 
         return;
     }
 
-    // Defensive Check: Ensure sc.Index is within valid range.
+    // Ensure sc.Index is within valid range.
     if (sc.Index < 0 || sc.Index >= sc.ArraySize)
     {
         sc.AddMessageToLog("Error: sc.Index is out of valid range.", 1);
         return;
     }
 
-    // Refresh Control: Update only every X bars as defined by the refresh interval.
+    // Refresh Control: Update only every X bars.
     int refreshInterval = RefreshInterval.GetInt();
     if ((sc.Index % refreshInterval) != 0)
         return;
@@ -97,10 +99,11 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
     }
 
     // Retrieve VAH and VAL arrays from the VP study (subgraph indices 3 and 4).
-    // The third parameter is supplied as 0.
-    float* vpVAHArray = sc.GetStudyArrayUsingID(vpStudyID, 3, 0);
-    float* vpVALArray = sc.GetStudyArrayUsingID(vpStudyID, 4, 0);
-    if (vpVAHArray == nullptr || vpVALArray == nullptr)
+    // Here we use the documented function that takes two parameters.
+    SCFloatArrayRef vpVAHArray = sc.GetStudyArrayUsingID(vpStudyID, 3);
+    SCFloatArrayRef vpVALArray = sc.GetStudyArrayUsingID(vpStudyID, 4);
+    // Check if the arrays are valid by verifying the internal pointer.
+    if (vpVAHArray.GetArrayPtr() == 0 || vpVALArray.GetArrayPtr() == 0)
     {
         sc.AddMessageToLog("Error: VAH/VAL arrays not found in the VP study.", 1);
         return;
