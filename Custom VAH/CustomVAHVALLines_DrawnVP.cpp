@@ -1,15 +1,16 @@
 #include "sierrachart.h"
 
-SCDLLName("Custom VAH/VAL Lines with VP Study Short Name - Last Element for Developing VP (Optimized)")
+SCDLLName("Custom VAH/VAL Lines with VP Study Short Name - Last Element for Developing VP (Optimized, No Extra Lines)")
 
 // Helper Function: DeleteVAHVALLines
 // Deletes the drawn VAH and VAL lines if they exist by configuring an s_UseTool structure
-// with SZM_DELETE and calling sc.UseTool with the appropriate line number. Logs deletion events.
+// with SZM_DELETE and calling sc.UseTool with the appropriate line number.
+// Logs deletion events if DebugMode is enabled.
 void DeleteVAHVALLines(SCStudyInterfaceRef sc)
 {
     int pLineID_VAH = sc.GetPersistentInt(1);
     int pLineID_VAL = sc.GetPersistentInt(2);
-    
+
     if (pLineID_VAH == 0 && pLineID_VAL == 0)
         return; // Nothing to delete.
     
@@ -17,7 +18,7 @@ void DeleteVAHVALLines(SCStudyInterfaceRef sc)
     memset(&Tool, 0, sizeof(Tool));
     Tool.ChartNumber = sc.ChartNumber;
     Tool.DrawingType = DRAWING_HORIZONTALLINE;
-    Tool.AddMethod = SZM_DELETE;  // Use SZM_DELETE to delete drawing tools.
+    Tool.AddMethod = SZM_DELETE;  // Use SZM_DELETE to delete the drawing tool.
     Tool.Region = sc.GraphRegion;
     Tool.BeginIndex = 0;
     Tool.EndIndex = sc.ArraySize - 1;
@@ -25,7 +26,7 @@ void DeleteVAHVALLines(SCStudyInterfaceRef sc)
     if (pLineID_VAH != 0)
     {
         char buf[128];
-        sprintf(buf, "Deleting VAH line (LineNumber %d)", pLineID_VAH);
+        sprintf(buf, "Deleting stale VAH line (LineNumber %d)", pLineID_VAH);
         sc.AddMessageToLog(buf, 0);
         Tool.LineNumber = pLineID_VAH;
         sc.UseTool(Tool);
@@ -34,7 +35,7 @@ void DeleteVAHVALLines(SCStudyInterfaceRef sc)
     if (pLineID_VAL != 0)
     {
         char buf[128];
-        sprintf(buf, "Deleting VAL line (LineNumber %d)", pLineID_VAL);
+        sprintf(buf, "Deleting stale VAL line (LineNumber %d)", pLineID_VAL);
         sc.AddMessageToLog(buf, 0);
         Tool.LineNumber = pLineID_VAL;
         sc.UseTool(Tool);
@@ -44,13 +45,14 @@ void DeleteVAHVALLines(SCStudyInterfaceRef sc)
 
 // Study: CustomVAHVALLines_RevisedWithVPShortName
 // Retrieves VAH (subgraph index 3) and VAL (subgraph index 4) from a VP study specified by its short name,
-// then draws white, dashed horizontal lines at these levels. If the VP study is developing, the study uses
-// the last element of the VP arrays for drawing. The code gracefully handles cases where the VP arrays are not fully populated.
+// then draws exactly two horizontal dashed lines (one for VAH and one for VAL).
+// If the VP study is developing, the study uses the last element of the VP arrays for drawing.
+// If the VP study's array size changes (e.g. via manual adjustment), stale drawings are deleted before redrawing.
 // Debug logging is output if DebugMode is enabled.
 SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
 {
     // Input definitions:
-    // [0] Refresh Interval in bars (default 10 bars, e.g. ~5 minutes on a 30‑second chart)
+    // [0] Refresh Interval (Bars), default 10 bars (~5 minutes on a 30-sec chart)
     // [1] Display Lines When VP Completed (Yes/No)
     // [2] VP Study Short Name (default "Volume Profile")
     // [3] Debug Mode (Yes/No)
@@ -62,10 +64,10 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
     if (sc.SetDefaults)
     {
         sc.GraphName = "Custom VAH/VAL Lines with VP Study Short Name - Last Element for Developing VP (Optimized)";
-        sc.StudyDescription = "Retrieves VAH (SG3) and VAL (SG4) from a VP study (specified by short name) and draws white dashed horizontal lines. If the VP is developing, the last element of the VP arrays is used.";
+        sc.StudyDescription = "Retrieves VAH (SG3) and VAL (SG4) from a VP study (by short name) and draws exactly two horizontal dashed lines. If the VP is developing, the last element of the VP arrays is used. Stale drawings are deleted on manual adjustments.";
         sc.AutoLoop = 1;
         sc.GraphRegion = 0;
-        sc.CalculationPrecedence = LOW_PREC_LEVEL;
+        sc.CalculationPrecedence = LOW_PREC_LEVEL;  // Ensures VP arrays are updated.
         
         RefreshInterval.Name = "Refresh Interval (Bars)";
         RefreshInterval.SetInt(10);
@@ -82,12 +84,13 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
         
         // Persistent indices:
         // 1: VAH line ID, 2: VAL line ID, 3: Last bar index when VP missing warning was logged,
-        // 4: Cached last drawn VAH value, 5: Cached last drawn VAL value.
+        // 4: Cached last drawn VAH value, 5: Cached last drawn VAL value, 6: Cached VP array size.
         sc.SetPersistentInt(1, 0);
         sc.SetPersistentInt(2, 0);
         sc.SetPersistentInt(3, 0);
         sc.SetPersistentFloat(4, 0.0);
         sc.SetPersistentFloat(5, 0.0);
+        sc.SetPersistentInt(6, 0);
         
         return;
     }
@@ -99,7 +102,7 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
     if ((sc.Index % refreshInterval) != 0)
         return;
     
-    // Retrieve the VP study using short name lookup; third parameter set to 1.
+    // Retrieve VP study using short name lookup; use third parameter = 1.
     int vpStudyID = sc.GetStudyIDByName(sc.ChartNumber, VPStudyShortName.GetString(), 1);
     if (vpStudyID == 0)
     {
@@ -114,7 +117,7 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
         return;
     }
     
-    // Retrieve the VP study's subgraph arrays.
+    // Retrieve VP study arrays.
     SCFloatArray vpVAHArray;
     SCFloatArray vpVALArray;
     int resVAH = sc.GetStudyArrayUsingID(vpStudyID, 3, vpVAHArray);
@@ -132,36 +135,45 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
         return;
     }
     
-    // Determine the index to use for retrieving VP values.
-    // If the VP study is developing, use the last element of the arrays.
-    // Otherwise, if sc.Index exceeds the array size (i.e. arrays are not fully populated), use the last element.
-    bool vpDeveloping = (sc.Index == sc.ArraySize - 1);
-    int indexForValue = 0;
-    if (vpDeveloping)
+    int currentArraySize = vpVAHArray.GetArraySize();
+    int cachedArraySize = sc.GetPersistentInt(6);
+    if (currentArraySize != cachedArraySize)
     {
-        indexForValue = vpVAHArray.GetArraySize() - 1;
         if (DebugMode.GetYesNo())
         {
             char buf[256];
-            sprintf(buf, "VP is developing; using last index %d of VP arrays for VAH/VAL retrieval.", indexForValue);
+            sprintf(buf, "VP array size changed from %d to %d. Deleting stale drawings.", cachedArraySize, currentArraySize);
+            sc.AddMessageToLog(buf, 0);
+        }
+        // Force deletion of any stale drawings.
+        DeleteVAHVALLines(sc);
+        sc.SetPersistentInt(6, currentArraySize);
+    }
+    
+    // Determine the index to use for retrieving VP values.
+    // If the VP study is developing (sc.Index equals the last bar in the chart),
+    // then use the last element of the VP arrays. Otherwise, use sc.Index if within bounds,
+    // otherwise default to the last element.
+    bool vpDeveloping = (sc.Index == sc.ArraySize - 1);
+    int indexForValue = sc.Index;
+    if (vpDeveloping)
+    {
+        indexForValue = currentArraySize - 1;
+        if (DebugMode.GetYesNo())
+        {
+            char buf[256];
+            sprintf(buf, "VP is developing; using last index %d of VP arrays.", indexForValue);
             sc.AddMessageToLog(buf, 0);
         }
     }
-    else
+    else if (sc.Index >= currentArraySize)
     {
-        if (sc.Index >= vpVAHArray.GetArraySize())
+        indexForValue = currentArraySize - 1;
+        if (DebugMode.GetYesNo())
         {
-            indexForValue = vpVAHArray.GetArraySize() - 1;
-            if (DebugMode.GetYesNo())
-            {
-                char buf[256];
-                sprintf(buf, "sc.Index (%d) exceeds VP array size; using last index %d.", sc.Index, indexForValue);
-                sc.AddMessageToLog(buf, 0);
-            }
-        }
-        else
-        {
-            indexForValue = sc.Index;
+            char buf[256];
+            sprintf(buf, "sc.Index (%d) out of bounds; using last index %d.", sc.Index, indexForValue);
+            sc.AddMessageToLog(buf, 0);
         }
     }
     
@@ -171,10 +183,11 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
     if (DebugMode.GetYesNo())
     {
         char buf[256];
-        sprintf(buf, "Using index %d: VAH = %.4f, VAL = %.4f (Array Size = %d)", indexForValue, currentVAH, currentVAL, vpVAHArray.GetArraySize());
+        sprintf(buf, "Using VP array index %d: VAH = %.4f, VAL = %.4f (Array Size = %d)", indexForValue, currentVAH, currentVAL, currentArraySize);
         sc.AddMessageToLog(buf, 0);
     }
     
+    // If VP is not developing and DisplayCompletedVP is false, delete drawings and exit.
     if (!vpDeveloping && DisplayCompletedVP.GetYesNo() == 0)
     {
         if (DebugMode.GetYesNo())
@@ -199,7 +212,7 @@ SCSFExport scsf_CustomVAHVALLines_RevisedWithVPShortName(SCStudyInterfaceRef sc)
         return;
     }
     
-    // Update drawing tools.
+    // Update drawing tools using UTAM_ADD_OR_ADJUST to update existing lines.
     s_UseTool Tool;
     memset(&Tool, 0, sizeof(Tool));
     Tool.ChartNumber = sc.ChartNumber;
